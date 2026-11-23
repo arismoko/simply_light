@@ -10,8 +10,9 @@ use std::sync::{Arc, Mutex};
 
 use mod_api::{
     BlockUpdateFlags, ClientHost, DrawContext, Flow, IPayloadContext, IPayloadHandler,
-    PayloadBytes, PayloadHandleError, PayloadId, PlayerRef, ScreenMouseButtonPressedPreEvent,
-    ScreenRenderPostEvent, ServerHost,
+    PayloadBytes, PayloadHandleError, PayloadId, PlayerRef, ScreenInitPostEvent,
+    ScreenMouseButtonPressedPreEvent, ScreenRenderPostEvent, ServerHost, Text,
+    client::widgets::Button,
 };
 
 use crate::features::{property_of, with_property};
@@ -45,23 +46,19 @@ struct Open {
     bits: u8,
 }
 
-enum Action {
-    Send,
-    Close,
-}
-
 #[derive(Default)]
 struct Client {
     open: Option<Open>,
     /// Where the last frame put the panel's corner.
     at: [f32; 2],
-    actions: Vec<Action>,
+    /// A switch flipped since the last tick, so the server needs the new sides.
+    send: bool,
 }
 
 static CLIENT: Mutex<Client> = Mutex::new(Client {
     open: None,
     at: [0.0; 2],
-    actions: Vec::new(),
+    send: false,
 });
 
 fn encode(pos: [i32; 3], bits: u8) -> PayloadBytes {
@@ -225,7 +222,7 @@ fn is_ours(host: &dyn ClientHost) -> bool {
     host.mod_screen() == Some(SCREEN)
 }
 
-/// Draws the panel, its four switches, the facing and the exit button.
+/// Draws the panel, its four switches and the facing; the exit button is mounted in [`init`].
 pub fn render(host: &dyn ClientHost, event: &mut ScreenRenderPostEvent<'_>) {
     if !is_ours(host) {
         return;
@@ -273,14 +270,29 @@ pub fn render(host: &dyn ClientHost, event: &mut ScreenRenderPostEvent<'_>) {
             false,
         );
     }
-    let exit = [at[0] + EXIT[0], at[1] + EXIT[1], EXIT[2], EXIT[3]];
-    let hover = inside(exit, event.screen.mouse);
-    if let Some(label) = host.translate("simplylight.gui.exit") {
-        let _ = draw.widget_button(exit, &mod_api::Text::literal(label), true, hover, None);
-    }
 }
 
-/// A click on a switch flips it and queues the send; a click on exit queues the close.
+/// Mounts the exit button (`Button`, `onClose`) when the editor opens.
+pub fn init(event: &mut ScreenInitPostEvent<'_>) {
+    if event.screen.mod_screen != Some(SCREEN) {
+        return;
+    }
+    let rect = event.screen.rect;
+    let at = corner([rect[2], rect[3]]);
+    let exit = [
+        rect[0] + at[0] + EXIT[0],
+        rect[1] + at[1] + EXIT[1],
+        EXIT[2],
+        EXIT[3],
+    ];
+    event.widgets.add_button(Button::new(
+        exit,
+        Text::translate("simplylight.gui.exit", vec![]),
+        |_, host| host.mod_screen_close(SCREEN),
+    ));
+}
+
+/// A click on a switch flips it and queues the send.
 pub fn click(host: &dyn ClientHost, event: &mut ScreenMouseButtonPressedPreEvent<'_>) -> Flow {
     if !is_ours(host) || event.button != 0 {
         return Flow::Continue;
@@ -293,31 +305,19 @@ pub fn click(host: &dyn ClientHost, event: &mut ScreenMouseButtonPressedPreEvent
     let mouse = event.screen.mouse;
     if let Some(row) = (0..4).find(|&row| inside(switch_rect(at, row), mouse)) {
         open.bits ^= SIDES[row].2;
-        client.actions.push(Action::Send);
-    } else if inside([at[0] + EXIT[0], at[1] + EXIT[1], EXIT[2], EXIT[3]], mouse) {
-        client.actions.push(Action::Close);
+        client.send = true;
     }
     Flow::Continue
 }
 
 /// Sends what the screen hooks queued.
 pub fn tick(host: &mut dyn ClientHost) {
-    let (open, actions) = {
+    let (open, send) = {
         let mut client = CLIENT.lock().unwrap_or_else(|e| e.into_inner());
-        (client.open, std::mem::take(&mut client.actions))
+        (client.open, std::mem::take(&mut client.send))
     };
-    for action in actions {
-        match action {
-            Action::Send => {
-                if let Some(open) = open {
-                    let _ = host.send_payload_to_server(
-                        &PayloadId(UPDATE.into()),
-                        encode(open.pos, open.bits),
-                    );
-                }
-            }
-            Action::Close => host.mod_screen_close(SCREEN),
-        }
+    if let (Some(open), true) = (open, send) {
+        let _ = host.send_payload_to_server(&PayloadId(UPDATE.into()), encode(open.pos, open.bits));
     }
     if host.mod_screen() != Some(SCREEN) {
         CLIENT.lock().unwrap_or_else(|e| e.into_inner()).open = None;

@@ -15,7 +15,6 @@ A port of [Simply Light](https://github.com/Flanks255/simplylight) by Flanks255 
 
 ## Differences from the original
 
-- An illuminant block switches one tick after its signal changes, not in the same block update.
 - The optional "Simply Light Full block CTM" resource pack is bundled, with the original's textures and `ctm` metadata. Those files are for a connected-textures mod; whether Sunrise joins the blocks from them is not confirmed, so without it the pack changes nothing you can see.
 - A lamp post is placed and removed as its three-block column; its partner blocks are removed at the end of the tick the post is broken.
 - The server edits an edge light from the side editor only when the player is within 8 blocks of it; the original accepts any position.
@@ -30,7 +29,7 @@ cargo sunrise-mod run      # builds it and starts the game with it
 cargo test
 ```
 
-`sunrise-mod.toml` pins the Sunrise Dev build `dev-2026-11-22-7cfdf81` (game commit `7cfdf81463`). Sunrise builds native mods from source on the player's computer, against the exact game build.
+`sunrise-mod.toml` pins the Sunrise Dev build `dev-2026-11-23-ebd2d22` (game commit `ebd2d226fb`). Sunrise builds native mods from source on the player's computer, against the exact game build.
 
 ## Licence and credits
 

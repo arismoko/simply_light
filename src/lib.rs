@@ -13,11 +13,10 @@ pub mod recipes;
 pub mod runtime;
 
 use mod_api::{
-    self, BlockChangedEvent, BlockKey, BlockPart, BlockState, ClientHost, ClientTickPostEvent,
-    Flow, Hooks, HostSide, IsSignalSourceEvent, LevelHost, LevelTickPostEvent, LevelTicksHost,
-    LevelWriteHost, NeighborChangedEvent, PayloadId, PlayerLoggedInEvent, Registrar,
-    RegistrationContext, ScreenMouseButtonPressedPreEvent, ScreenRenderPostEvent, ServerHost,
-    SetPlacedByEvent, TickBlockEvent,
+    self, BlockChangedEvent, BlockPart, ClientHost, ClientTickPostEvent, Flow, Hooks, HostSide,
+    IsSignalSourceEvent, LevelHost, LevelTickPostEvent, LevelWriteHost, NeighborChangedEvent,
+    PayloadId, PlayerLoggedInEvent, Registrar, RegistrationContext, ScreenInitPostEvent,
+    ScreenMouseButtonPressedPreEvent, ScreenRenderPostEvent, ServerHost, SetPlacedByEvent,
 };
 
 /// The 16 colours in upstream's registration order; white is the bare `illuminant_block`.
@@ -67,21 +66,6 @@ fn on_value(on: bool) -> &'static str {
 /// `isSignalSource`). `inverted` is the block's default `on`.
 struct Lamp {
     inverted: bool,
-    block: BlockKey,
-}
-
-impl Lamp {
-    /// The state the lamp at `pos` should have now, when it differs from `state`.
-    fn wanted(
-        &self,
-        level: &dyn LevelHost,
-        pos: [i32; 3],
-        state: BlockState,
-    ) -> Option<BlockState> {
-        let on = lit(self.inverted, level.has_neighbor_signal(pos)?);
-        let target = level.state_with_property(state, "on", on_value(on))?;
-        (target != state).then_some(target)
-    }
 }
 
 #[mod_api::sunrise_part]
@@ -98,23 +82,16 @@ impl BlockPart for Lamp {
         }
     }
 
-    /// `LampBlock.neighborChanged` writes the new state at once; this hook can't write the
-    /// level, so the lamp asks for a block tick and switches in it, one tick later.
-    fn neighbor_changed(&self, level: &mut dyn LevelTicksHost, event: &mut NeighborChangedEvent) {
+    /// `LampBlock.neighborChanged`: the lamp takes its new state at once (`setBlockAndUpdate`,
+    /// `Block.UPDATE_ALL`: neighbours and clients).
+    fn neighbor_changed(&self, level: &mut dyn LevelWriteHost, event: &mut NeighborChangedEvent) {
         let pos = [event.pos.x, event.pos.y, event.pos.z];
-        if self.wanted(&*level, pos, event.state).is_some() {
-            level.schedule_block_tick(pos, self.block, 1);
+        if let Some(on) = level.has_neighbor_signal(pos) {
+            let target = on_value(lit(self.inverted, on));
+            if level.state_with_property(event.state, "on", target) != Some(event.state) {
+                level.set_block_property(pos, "on", target, UPDATE_ALL);
+            }
         }
-    }
-
-    fn tick_block(&self, level: &mut dyn LevelWriteHost, event: &mut TickBlockEvent) -> Flow {
-        let pos = [event.pos.x, event.pos.y, event.pos.z];
-        let Some(powered) = level.has_neighbor_signal(pos) else {
-            return Flow::Continue;
-        };
-        // `setBlockAndUpdate`: `Block.UPDATE_ALL`, neighbours and clients.
-        level.set_block_property(pos, "on", on_value(lit(self.inverted, powered)), UPDATE_ALL);
-        Flow::Cancel
     }
 
     /// `LampBlock.isSignalSource` is true, so redstone dust beside a lamp turns toward it.
@@ -133,7 +110,7 @@ impl Hooks for Mod {
         for colour in COLOURS {
             for inverted in [false, true] {
                 let block = r.block_key(&illuminant_id(colour, inverted));
-                r.block_part(block, Lamp { inverted, block });
+                r.block_part(block, Lamp { inverted });
             }
         }
         features::declare(r);
@@ -168,7 +145,12 @@ impl Hooks for Mod {
         editor::render(host, event);
     }
 
-    /// A click on one of the editor's switches or its exit button.
+    /// The editor's exit button.
+    fn screen_init_post(&self, _: &dyn ClientHost, event: &mut ScreenInitPostEvent<'_>) {
+        editor::init(event);
+    }
+
+    /// A click on one of the editor's switches.
     fn screen_mouse_button_pressed_pre(
         &self,
         host: &dyn ClientHost,
