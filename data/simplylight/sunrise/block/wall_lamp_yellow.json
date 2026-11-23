@@ -77,5 +77,10 @@
       "facing"
     ]
   },
-  "template": "minecraft:amethyst_cluster"
+  "template": "minecraft:amethyst_cluster",
+  "components": {
+    "minecraft:equippable": {
+      "slot": "head"
+    }
+  }
 }

@@ -23,5 +23,10 @@
       "true": 15
     },
     "default": 0
+  },
+  "components": {
+    "minecraft:equippable": {
+      "slot": "head"
+    }
   }
 }

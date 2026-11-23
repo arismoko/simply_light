@@ -6,6 +6,7 @@ A port of [Simply Light](https://github.com/Flanks255/simplylight) by Flanks255 
 
 ## What it does
 
+- A lamp post is three blocks tall and only its top block emits light; hover a light and hold Shift for its detail text; every light can be worn on the head; new players get the mod's recipes.
 - Ten families in 16 colours: illuminant blocks, slabs and panels, wall lamps, light bulbs, rod lamps, lamp posts and edge lights.
 - Illuminant blocks switch with redstone as in the original: a plain one lights when powered, an inverted one goes dark, and redstone dust turns toward them.
 - Panels, slabs, wall lamps and bulbs face the way you place them and can be waterlogged.
@@ -14,7 +15,8 @@ A port of [Simply Light](https://github.com/Flanks255/simplylight) by Flanks255 
 ## Differences from the original
 
 - An illuminant block switches one tick after its signal changes, not in the same block update.
-- The lamp post is placed as one block, not as its three-block column, and the edge-light editor and the blocks' tooltips are not ported.
+- The edge lights' side editor (sneak-click) is not ported yet; their sides follow the walls around them when placed, and a lamp post is placed and removed as its three-block column.
+- A lamp post's partner blocks are removed at the end of the tick the post is broken.
 
 ## Building
 

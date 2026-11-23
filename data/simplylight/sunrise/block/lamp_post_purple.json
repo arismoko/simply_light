@@ -8,7 +8,8 @@
     "light": 15,
     "map_color": 29,
     "requires_tool": false,
-    "sounds": "minecraft:stone"
+    "sounds": "minecraft:stone",
+    "dynamic_light": true
   },
   "shapes": {
     "values": {
@@ -97,5 +98,26 @@
       ]
     }
   },
-  "template": "minecraft:mangrove_roots"
+  "template": "minecraft:mangrove_roots",
+  "components": {
+    "minecraft:equippable": {
+      "slot": "head"
+    },
+    "minecraft:attribute_modifiers": [
+      {
+        "type": "minecraft:attack_damage",
+        "id": "minecraft:base_attack_damage",
+        "amount": 4.0,
+        "operation": "add_value",
+        "slot": "mainhand"
+      },
+      {
+        "type": "minecraft:attack_speed",
+        "id": "minecraft:base_attack_speed",
+        "amount": -2.0,
+        "operation": "add_value",
+        "slot": "mainhand"
+      }
+    ]
+  }
 }

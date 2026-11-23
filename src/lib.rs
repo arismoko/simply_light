@@ -7,18 +7,35 @@
 //!
 //! [`runtime`] is the port's census model of the content, checked by `cargo test` alone.
 
+pub mod features;
+pub mod recipes;
 pub mod runtime;
 
 use mod_api::{
-    self, BlockKey, BlockPart, BlockState, Flow, Hooks, IsSignalSourceEvent,
-    LevelHost, LevelTicksHost, LevelWriteHost, NeighborChangedEvent, Registrar,
-    RegistrationContext, ServerHost, SetPlacedByEvent, TickBlockEvent,
+    self, BlockChangedEvent, BlockKey, BlockPart, BlockState, Flow, Hooks, HostSide,
+    IsSignalSourceEvent, LevelHost, LevelTickPostEvent, LevelTicksHost, LevelWriteHost,
+    NeighborChangedEvent, PlayerLoggedInEvent, Registrar, RegistrationContext, ServerHost,
+    SetPlacedByEvent, TickBlockEvent,
 };
 
 /// The 16 colours in upstream's registration order; white is the bare `illuminant_block`.
 const COLOURS: [&str; 16] = [
-    "white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "light_gray",
-    "cyan", "purple", "blue", "brown", "green", "red", "black",
+    "white",
+    "orange",
+    "magenta",
+    "light_blue",
+    "yellow",
+    "lime",
+    "pink",
+    "gray",
+    "light_gray",
+    "cyan",
+    "purple",
+    "blue",
+    "brown",
+    "green",
+    "red",
+    "black",
 ];
 
 /// The illuminant block of `colour`, plain (lit by redstone) or `_on` (dimmed by redstone).
@@ -53,7 +70,12 @@ struct Lamp {
 
 impl Lamp {
     /// The state the lamp at `pos` should have now, when it differs from `state`.
-    fn wanted(&self, level: &dyn LevelHost, pos: [i32; 3], state: BlockState) -> Option<BlockState> {
+    fn wanted(
+        &self,
+        level: &dyn LevelHost,
+        pos: [i32; 3],
+        state: BlockState,
+    ) -> Option<BlockState> {
         let on = lit(self.inverted, level.has_neighbor_signal(pos)?);
         let target = level.state_with_property(state, "on", on_value(on))?;
         (target != state).then_some(target)
@@ -65,7 +87,11 @@ impl BlockPart for Lamp {
     /// `LampBlock.setPlacedBy`: a lamp placed beside a powered block takes its other state
     /// at once (`setBlockAndUpdate`, as `set_block_property` writes).
     fn set_placed_by(&self, host: &mut dyn ServerHost, event: &mut SetPlacedByEvent<'_>) {
-        if event.level.best_neighbor_signal(&*host, event.pos).is_some_and(|s| s > 0) {
+        if event
+            .level
+            .best_neighbor_signal(&*host, event.pos)
+            .is_some_and(|s| s > 0)
+        {
             host.set_block_property(event.pos, "on", on_value(lit(self.inverted, true)));
         }
     }
@@ -108,6 +134,24 @@ impl Hooks for Mod {
                 r.block_part(block, Lamp { inverted, block });
             }
         }
+        features::declare(r);
+    }
+
+    /// `RecipeUnlocker`: a new player gets the mod's recipes.
+    fn player_logged_in(&self, host: &mut dyn ServerHost, event: &mut PlayerLoggedInEvent<'_>) {
+        features::on_player_logged_in(host, event);
+    }
+
+    /// A lamp post block that was removed takes its column with it.
+    fn block_changed(&self, level: &dyn LevelHost, event: &mut BlockChangedEvent) {
+        features::on_block_changed(level, event);
+    }
+
+    /// After the level's tick, in the level that ticked: clear the columns of removed posts.
+    fn level_tick_post(&self, host: HostSide<'_>, event: &mut LevelTickPostEvent) {
+        if let HostSide::Server(host) = host {
+            features::on_level_tick_post(host, event.level);
+        }
     }
 }
 
@@ -125,8 +169,17 @@ mod tests {
 
     #[test]
     fn ids_follow_upstream_names() {
-        assert_eq!(illuminant_id("white", false), "simplylight:illuminant_block");
-        assert_eq!(illuminant_id("white", true), "simplylight:illuminant_block_on");
-        assert_eq!(illuminant_id("light_blue", true), "simplylight:illuminant_light_blue_block_on");
+        assert_eq!(
+            illuminant_id("white", false),
+            "simplylight:illuminant_block"
+        );
+        assert_eq!(
+            illuminant_id("white", true),
+            "simplylight:illuminant_block_on"
+        );
+        assert_eq!(
+            illuminant_id("light_blue", true),
+            "simplylight:illuminant_light_blue_block_on"
+        );
     }
 }

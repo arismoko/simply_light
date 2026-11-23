@@ -44,5 +44,10 @@
       "axis"
     ]
   },
-  "template": "minecraft:iron_chain"
+  "template": "minecraft:iron_chain",
+  "components": {
+    "minecraft:equippable": {
+      "slot": "head"
+    }
+  }
 }

@@ -340,5 +340,10 @@
       ]
     }
   },
-  "template": "minecraft:oak_fence"
+  "template": "minecraft:oak_fence",
+  "components": {
+    "minecraft:equippable": {
+      "slot": "head"
+    }
+  }
 }
