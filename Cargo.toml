@@ -1,6 +1,6 @@
 [package]
 name = "mod-simplylight"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2024"
 license = "MIT"
 description = "Simply Light for Sunrise: 160 light blocks, and the illuminant blocks' redstone switch"
