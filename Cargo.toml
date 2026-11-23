@@ -1,21 +1,15 @@
 [package]
 name = "mod-simplylight"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 license = "MIT"
-description = "Simply Light for Horizon: 160 light blocks, carried as content"
-# Ported from: Simply Light 1.5.3+1.21.1-b4 (Flanks255/simplylight, MIT per the
-# jar's META-INF/neoforge.mods.toml and the upstream LICENSE), Minecraft Java
-# 1.21.1 NeoForge. The textures, models, blockstates, lang and recipes are the
-# upstream mod's own MIT files, upgraded to 26.3; the declarations in
-# data/simplylight/horizon/block/ are generated from the behaviour read in the
-# upstream source. `src/runtime.rs` is the clean-room census model carried
-# byte-identical from the retired bundle.
-# LOCAL-ONLY until the maintainer approves publishing (ARCHITECTURE.md §8).
+description = "Simply Light for Sunrise: 160 light blocks, and the illuminant blocks' redstone switch"
+# Ported from: Simply Light 1.5.3+1.21.1-b4 (Flanks255/simplylight, MIT), Minecraft Java 1.21.1
+# NeoForge. The textures, models, blockstates, lang and recipes are the upstream mod's own MIT
+# files, upgraded to 26.3; the declarations in data/simplylight/sunrise/block/ are generated from
+# the behaviour read in the upstream source.
 publish = false
 
 [dependencies]
-# The pinned SDK's API crate, fetched into .horizon/sdk/ by any `cargo horizon-mod`
-# command. No other dependency: this package's only code is the test-only census
-# model, and it registers nothing from Rust.
-horizon-mod-api = { path = ".horizon/sdk/api/crates/horizon-mod-api" }
+# The pinned SDK's API crate, fetched into .sunrise/sdk/ by any `cargo sunrise-mod` command.
+sunrise-mod-api = { path = ".sunrise/sdk/api/crates/sunrise-mod-api" }
