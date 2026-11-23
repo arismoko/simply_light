@@ -189,6 +189,7 @@
   "simplylight.gui.west": "West",
   "simplylight.key.shift": "Shift",
   "simplylight.pack.fullblock_ctm": "Simply Light Full block CTM",
+  "simplylight.pack.fullblock_ctm.description": "Optional connected textures for the illuminant blocks (needs a connected-textures renderer)",
   "simplylight.redstone": "Redstone",
   "simplylight.shift": "Press <%s> for info."
 }

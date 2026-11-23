@@ -231,6 +231,18 @@ impl BlockPart for Edge {
         }
         Some(Some(state))
     }
+
+    /// `EdgeLight.useWithoutItem`: sneak-click opens the side editor.
+    fn use_without_item(
+        &self,
+        host: &mut dyn ServerHost,
+        event: &mut mod_api::UseWithoutItemEvent<'_>,
+    ) -> Option<mod_api::InteractionResult> {
+        let state = host.block_state_string(event.state)?;
+        let player = host.player(event.click.player)?;
+        crate::editor::open_for(host, player, event.click.pos, &state);
+        None
+    }
 }
 
 fn styled(key: &str, colour: &str, italic: bool) -> Text {

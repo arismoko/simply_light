@@ -7,14 +7,16 @@
 //!
 //! [`runtime`] is the port's census model of the content, checked by `cargo test` alone.
 
+pub mod editor;
 pub mod features;
 pub mod recipes;
 pub mod runtime;
 
 use mod_api::{
-    self, BlockChangedEvent, BlockKey, BlockPart, BlockState, Flow, Hooks, HostSide,
-    IsSignalSourceEvent, LevelHost, LevelTickPostEvent, LevelTicksHost, LevelWriteHost,
-    NeighborChangedEvent, PlayerLoggedInEvent, Registrar, RegistrationContext, ServerHost,
+    self, BlockChangedEvent, BlockKey, BlockPart, BlockState, ClientHost, ClientTickPostEvent,
+    Flow, Hooks, HostSide, IsSignalSourceEvent, LevelHost, LevelTickPostEvent, LevelTicksHost,
+    LevelWriteHost, NeighborChangedEvent, PayloadId, PlayerLoggedInEvent, Registrar,
+    RegistrationContext, ScreenMouseButtonPressedPreEvent, ScreenRenderPostEvent, ServerHost,
     SetPlacedByEvent, TickBlockEvent,
 };
 
@@ -135,6 +137,49 @@ impl Hooks for Mod {
             }
         }
         features::declare(r);
+        let (open, update) = editor::handlers();
+        r.payload_handlers()
+            .registrar("1")
+            .optional()
+            .play_to_client(PayloadId(editor::OPEN.into()), Some(open))
+            .play_to_server(PayloadId(editor::UPDATE.into()), update);
+    }
+
+    /// `SimplyLight.PackFinders`: the optional full-block connected-texture pack.
+    fn add_pack_finders(
+        &self,
+        _: &mut dyn mod_api::PackDiscoveryContext,
+        event: &mut mod_api::AddPackFindersEvent<'_>,
+    ) {
+        if let Ok(location) = mod_api::Identifier::parse(
+            "simplylight:assets/simplylight/resourcepacks/optional_fullblock_ctm",
+        ) {
+            let title = mod_api::Text::translate("simplylight.pack.fullblock_ctm", vec![]);
+            let _ = event.packs.add_pack_finders(mod_api::PackRegistration::new(
+                location,
+                mod_api::PackType::ClientResources,
+                title,
+            ));
+        }
+    }
+
+    /// The editor screen over the world.
+    fn screen_render_post(&self, host: &dyn ClientHost, event: &mut ScreenRenderPostEvent<'_>) {
+        editor::render(host, event);
+    }
+
+    /// A click on one of the editor's switches or its exit button.
+    fn screen_mouse_button_pressed_pre(
+        &self,
+        host: &dyn ClientHost,
+        event: &mut ScreenMouseButtonPressedPreEvent<'_>,
+    ) -> Flow {
+        editor::click(host, event)
+    }
+
+    /// What the editor's clicks queued goes out.
+    fn client_tick_post(&self, host: &mut dyn ClientHost, _: &mut ClientTickPostEvent) {
+        editor::tick(host);
     }
 
     /// `RecipeUnlocker`: a new player gets the mod's recipes.
