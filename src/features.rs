@@ -261,14 +261,17 @@ pub struct Info {
 #[mod_api::sunrise_part]
 impl ItemPart for Info {
     fn tooltip(&self, host: &dyn ClientHost, event: &mut TooltipEvent<'_>) {
-        let gray = 0xAAAAAA;
+        // The lines are `ChatFormatting.GRAY` in their style; `u32::MAX` keeps that colour.
+        let gray = |text: Text| {
+            let mut style = mod_api::text::TextStyle::default();
+            style.color = Some("gray".to_owned());
+            (text.with_style(style), u32::MAX)
+        };
         let key = format!("block.simplylight.{}.info", self.base);
         let shift = host.is_key_down("key.keyboard.left.shift")
             || host.is_key_down("key.keyboard.right.shift");
         if shift && host.translate(&key).is_some() {
-            event
-                .lines
-                .push((Text::translate(key.clone(), vec![]), gray));
+            event.lines.push(gray(Text::translate(key.clone(), vec![])));
             let second = format!("{key}2");
             if host.translate(&second).is_some() {
                 let redstone = matches!(self.base, "illuminant_block" | "illuminant_block_on");
@@ -277,13 +280,13 @@ impl ItemPart for Info {
                 } else {
                     vec![]
                 };
-                event.lines.push((Text::translate(second, args), gray));
+                event.lines.push(gray(Text::translate(second, args)));
             }
         } else {
             let key_name = styled("simplylight.key.shift", "gold", true);
             event
                 .lines
-                .push((Text::translate("simplylight.shift", vec![key_name]), gray));
+                .push(gray(Text::translate("simplylight.shift", vec![key_name])));
         }
     }
 }

@@ -16,7 +16,7 @@ use mod_api::{
     self, BlockChangedEvent, BlockPart, ClientHost, ClientTickPostEvent, Flow, Hooks, HostSide,
     IsSignalSourceEvent, LevelHost, LevelTickPostEvent, LevelWriteHost, NeighborChangedEvent,
     PayloadId, PlayerLoggedInEvent, Registrar, RegistrationContext, ScreenInitPostEvent,
-    ScreenMouseButtonPressedPreEvent, ScreenRenderPostEvent, ServerHost, SetPlacedByEvent,
+    ScreenMouseButtonPressedPreEvent, ScreenRenderBackgroundEvent, ServerHost, SetPlacedByEvent,
 };
 
 /// The 16 colours in upstream's registration order; white is the bare `illuminant_block`.
@@ -141,7 +141,11 @@ impl Hooks for Mod {
     }
 
     /// The editor screen over the world.
-    fn screen_render_post(&self, host: &dyn ClientHost, event: &mut ScreenRenderPostEvent<'_>) {
+    fn screen_render_background(
+        &self,
+        host: &dyn ClientHost,
+        event: &mut ScreenRenderBackgroundEvent<'_>,
+    ) {
         editor::render(host, event);
     }
 

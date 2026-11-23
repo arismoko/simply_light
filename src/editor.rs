@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use mod_api::{
     BlockUpdateFlags, ClientHost, DrawContext, Flow, IPayloadContext, IPayloadHandler,
     PayloadBytes, PayloadHandleError, PayloadId, PlayerRef, ScreenInitPostEvent,
-    ScreenMouseButtonPressedPreEvent, ScreenRenderPostEvent, ServerHost, Text,
+    ScreenMouseButtonPressedPreEvent, ScreenRenderBackgroundEvent, ServerHost, Text,
     client::widgets::Button,
 };
 
@@ -222,8 +222,9 @@ fn is_ours(host: &dyn ClientHost) -> bool {
     host.mod_screen() == Some(SCREEN)
 }
 
-/// Draws the panel, its four switches and the facing; the exit button is mounted in [`init`].
-pub fn render(host: &dyn ClientHost, event: &mut ScreenRenderPostEvent<'_>) {
+/// Draws the panel, its four switches and the facing under the screen's widgets, so the exit button mounted in
+/// [`init`] shows over it.
+pub fn render(host: &dyn ClientHost, event: &mut ScreenRenderBackgroundEvent<'_>) {
     if !is_ours(host) {
         return;
     }
