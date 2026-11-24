@@ -15,7 +15,7 @@ A port of [Simply Light](https://github.com/Flanks255/simplylight) by Flanks255 
 
 ## Differences from the original
 
-- The optional "Simply Light Full block CTM" resource pack is bundled, with the original's textures and `ctm` metadata. Those files are for a connected-textures mod; whether Sunrise joins the blocks from them is not confirmed, so without it the pack changes nothing you can see.
+- The optional "Simply Light Full block CTM" resource pack is bundled: turn it on in Resource Packs and neighbouring illuminant blocks of the same kind join into one panel. The original's pack was written for the Connected Textures mod; here the same pictures are in OptiFine's connected-texture format, which Sunrise reads (`tools/gen_ctm_pack.py`).
 - A lamp post is placed and removed as its three-block column; its partner blocks are removed at the end of the tick the post is broken.
 - The server edits an edge light from the side editor only when the player is within 8 blocks of it; the original accepts any position.
 

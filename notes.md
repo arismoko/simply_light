@@ -178,7 +178,12 @@ Template-derived deviations, measured in `probe-support.log`:
    and the stateless `illuminant_block` counterfactual; see
    [`## Slice: carried-data parity`](#slice-carried-data-parity--waterlogging-021-2026-11-21-pin-0a875da).
 7. **The optional CTM resource pack** (`optional_fullblock_ctm`, a built-in
-   client pack upstream) is not carried; the panel/slab `.mcmeta` overlays are.
+   client pack upstream) is carried in OptiFine's `ctm_compact` form: the
+   original's CTM-mod sheets (`"type": "ctm"`, version 1) become tiles 1-4 and
+   each block's own texture tile 0 (`tools/gen_ctm_pack.py`), since Sunrise
+   reads `optifine/ctm` and not the CTM mod's `.png.mcmeta`. Faces join by
+   texture (OptiFine's default for `matchTiles`), so lit and unlit blocks of
+   one colour stay apart.
 8. **No JEI plugin** (upstream ships one); Horizon's recipe viewer is built in.
 9. **`c:stones` membership is ours**: 26.3 ships no `c:` tags, so
    `data/c/tags/item/stones.json` lists the 12 vanilla natural stone blocks
