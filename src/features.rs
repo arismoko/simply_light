@@ -6,13 +6,13 @@
 //! (`appendHoverText`). The rules are pure functions at the top, tested by `cargo test`.
 
 use std::collections::BTreeMap;
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Mutex, OnceLock, RwLock};
 
 use mod_api::{
-    self, AttachmentCodec, AttachmentType, BlockChangedEvent, BlockPart, BlockState,
-    BlockUpdateFlags, ClientHost, Compound, Host, ItemPart, LevelHost, LevelRef, LevelSide,
-    LightEmissionEvent, PlayerLoggedInEvent, Registrar, ServerHost, SetPlacedByEvent,
-    StateForPlacementEvent, Tag, Text, TooltipEvent,
+    self, AttachmentCodec, AttachmentDescriptor, AttachmentKey, BlockChangedEvent, BlockPart,
+    BlockState, BlockUpdateFlags, ClientHost, Compound, Host, HostSide, ItemPart, LevelHost,
+    LevelRef, LevelSide, LightEmissionEvent, PlayerLoggedInEvent, Registrar, ServerHost,
+    SetPlacedByEvent, StateForPlacementEvent, Tag, Text, TooltipEvent,
 };
 
 /// The 15 dye colours; white is the bare name.
@@ -88,24 +88,24 @@ pub fn tooltip_base(tag: &str) -> Option<&'static str> {
 }
 
 /// The recipe version a player has been given (`RecipeUnlocker`'s persistent `simplylight_unlocked`).
-static UNLOCKED: AttachmentType<i32> = AttachmentType {
-    namespace: "simplylight",
-    name: "recipes_unlocked",
-    default: || 0,
-    codec: Some(AttachmentCodec {
-        encode: |value| {
-            let mut out = Compound::new();
-            out.insert("version".into(), Tag::Int(*value));
-            Ok(out)
-        },
-        decode: |saved| match saved.get(&"version".into()) {
-            Some(Tag::Int(value)) => Ok(*value),
-            _ => Err(mod_api::AttachmentError::Decode),
-        },
-    }),
-    copy_on_death: true,
-    sync: false,
-};
+static UNLOCKED: RwLock<Option<AttachmentKey<i32>>> = RwLock::new(None);
+
+/// The persisted, death-surviving, unsynced descriptor of [`UNLOCKED`].
+fn unlocked_descriptor() -> AttachmentDescriptor<i32> {
+    AttachmentDescriptor::new("simplylight:recipes_unlocked", || 0)
+        .serialize(AttachmentCodec {
+            encode: |value| {
+                let mut out = Compound::new();
+                out.insert("version".into(), Tag::Int(*value));
+                Ok(out)
+            },
+            decode: |saved| match saved.get(&"version".into()) {
+                Some(Tag::Int(value)) => Ok(*value),
+                _ => Err(mod_api::AttachmentError::Decode),
+            },
+        })
+        .copy_on_death()
+}
 
 /// The version of the recipe set; raising it gives players the new recipes at their next join.
 const RECIPE_VERSION: i32 = 4;
@@ -116,10 +116,13 @@ pub fn on_player_logged_in(host: &mut dyn ServerHost, event: &mut PlayerLoggedIn
     let Some(player) = host.player(event.player) else {
         return;
     };
+    let Some(key) = UNLOCKED.read().unwrap_or_else(|e| e.into_inner()).clone() else {
+        return;
+    };
     let holder = mod_api::Holder::Player(event.player);
-    if UNLOCKED
-        .get(host.attachments(), holder)
-        .is_ok_and(|seen| seen >= RECIPE_VERSION)
+    if key
+        .get(host, holder, |seen| *seen >= RECIPE_VERSION)
+        .unwrap_or(false)
     {
         return;
     }
@@ -127,7 +130,7 @@ pub fn on_player_logged_in(host: &mut dyn ServerHost, event: &mut PlayerLoggedIn
         .award_recipes(host, crate::recipes::RECIPES)
         .is_some()
     {
-        let _ = UNLOCKED.set(host.attachments(), holder, RECIPE_VERSION);
+        let _ = key.set(host, holder, RECIPE_VERSION);
     }
 }
 
@@ -235,9 +238,12 @@ impl BlockPart for Edge {
     /// `EdgeLight.useWithoutItem`: sneak-click opens the side editor.
     fn use_without_item(
         &self,
-        host: &mut dyn ServerHost,
+        host: HostSide<'_>,
         event: &mut mod_api::UseWithoutItemEvent<'_>,
     ) -> Option<mod_api::InteractionResult> {
+        let HostSide::Server(host) = host else {
+            return None;
+        };
         let state = host.block_state_string(event.state)?;
         let player = host.player(event.click.player)?;
         crate::editor::open_for(host, player, event.click.pos, &state);
@@ -260,7 +266,7 @@ pub struct Info {
 
 #[mod_api::sunrise_part]
 impl ItemPart for Info {
-    fn tooltip(&self, host: &dyn ClientHost, event: &mut TooltipEvent<'_>) {
+    fn tooltip(&self, host: &dyn ClientHost, event: &mut TooltipEvent<'_, '_>) {
         // The lines are `ChatFormatting.GRAY` in their style; `u32::MAX` keeps that colour.
         let gray = |text: Text| {
             let mut style = mod_api::text::TextStyle::default();
@@ -271,7 +277,7 @@ impl ItemPart for Info {
         let shift = host.is_key_down("key.keyboard.left.shift")
             || host.is_key_down("key.keyboard.right.shift");
         if shift && host.translate(&key).is_some() {
-            event.lines.push(gray(Text::translate(key.clone(), vec![])));
+            let _ = event.lines.push(gray(Text::translate(key.clone(), vec![])));
             let second = format!("{key}2");
             if host.translate(&second).is_some() {
                 let redstone = matches!(self.base, "illuminant_block" | "illuminant_block_on");
@@ -280,11 +286,11 @@ impl ItemPart for Info {
                 } else {
                     vec![]
                 };
-                event.lines.push(gray(Text::translate(second, args)));
+                let _ = event.lines.push(gray(Text::translate(second, args)));
             }
         } else {
             let key_name = styled("simplylight.key.shift", "gold", true);
-            event
+            let _ = event
                 .lines
                 .push(gray(Text::translate("simplylight.shift", vec![key_name])));
         }
@@ -361,7 +367,8 @@ pub fn on_level_tick_post(host: &mut dyn ServerHost, level: LevelRef) {
 
 /// Attach the parts.
 pub fn declare(r: &mut dyn Registrar) {
-    let _ = r.register_attachment_type("simplylight:recipes_unlocked", false);
+    *UNLOCKED.write().unwrap_or_else(|e| e.into_inner()) =
+        r.register_attachment_type(unlocked_descriptor()).ok();
     for id in coloured("lamp_post") {
         let block = r.block_key(&format!("simplylight:{id}"));
         r.block_part(block, Post);
