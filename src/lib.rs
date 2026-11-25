@@ -13,10 +13,11 @@ pub mod recipes;
 pub mod runtime;
 
 use mod_api::{
-    self, BlockChangedEvent, BlockPart, ClientHost, ClientTickPostEvent, Flow, Hooks, HostSide,
-    IsSignalSourceEvent, LevelHost, LevelTickPostEvent, LevelWriteHost, NeighborChangedEvent,
-    PayloadId, PlayerLoggedInEvent, Registrar, RegistrationContext, ScreenInitPostEvent,
-    ScreenMouseButtonPressedPreEvent, ScreenRenderBackgroundEvent, ServerHost, SetPlacedByEvent,
+    self, BlockChangedEvent, BlockPart, BlockUpdateFlags, ClientHost, ClientTickPostEvent, Flow,
+    Hooks, HostSide, IsSignalSourceEvent, LevelHost, LevelTickPostEvent, LevelWriteHost,
+    NeighborChangedEvent, PayloadId, PlayerLoggedInEvent, Registrar, RegistrationContext,
+    ScreenInitPostEvent, ScreenMouseButtonPressedPreEvent, ScreenRenderBackgroundEvent, ServerHost,
+    SetPlacedByEvent,
 };
 
 /// The 16 colours in upstream's registration order; white is the bare `illuminant_block`.
@@ -56,7 +57,9 @@ fn lit(inverted: bool, powered: bool) -> bool {
 }
 
 /// Vanilla's `Block.UPDATE_ALL` (`UPDATE_NEIGHBORS | UPDATE_CLIENTS`).
-const UPDATE_ALL: i32 = 3;
+fn update_all() -> BlockUpdateFlags {
+    BlockUpdateFlags::NEIGHBORS | BlockUpdateFlags::CLIENTS
+}
 
 fn on_value(on: bool) -> &'static str {
     if on { "true" } else { "false" }
@@ -78,7 +81,13 @@ impl BlockPart for Lamp {
             .best_neighbor_signal(&*host, event.pos)
             .is_some_and(|s| s > 0)
         {
-            host.set_block_property(event.pos, "on", on_value(lit(self.inverted, true)));
+            let _ = event.level.set_block_property(
+                host,
+                event.pos,
+                "on",
+                on_value(lit(self.inverted, true)),
+                update_all(),
+            );
         }
     }
 
@@ -89,7 +98,7 @@ impl BlockPart for Lamp {
         if let Some(on) = level.has_neighbor_signal(pos) {
             let target = on_value(lit(self.inverted, on));
             if level.state_with_property(event.state, "on", target) != Some(event.state) {
-                level.set_block_property(pos, "on", target, UPDATE_ALL);
+                level.set_block_property(pos, "on", target, update_all());
             }
         }
     }

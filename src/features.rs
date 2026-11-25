@@ -266,7 +266,7 @@ pub struct Info {
 
 #[mod_api::sunrise_part]
 impl ItemPart for Info {
-    fn tooltip(&self, host: &dyn ClientHost, event: &mut TooltipEvent<'_>) {
+    fn tooltip(&self, host: &dyn ClientHost, event: &mut TooltipEvent<'_, '_>) {
         // The lines are `ChatFormatting.GRAY` in their style; `u32::MAX` keeps that colour.
         let gray = |text: Text| {
             let mut style = mod_api::text::TextStyle::default();
