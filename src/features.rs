@@ -277,7 +277,7 @@ impl ItemPart for Info {
         let shift = host.is_key_down("key.keyboard.left.shift")
             || host.is_key_down("key.keyboard.right.shift");
         if shift && host.translate(&key).is_some() {
-            event.lines.push(gray(Text::translate(key.clone(), vec![])));
+            let _ = event.lines.push(gray(Text::translate(key.clone(), vec![])));
             let second = format!("{key}2");
             if host.translate(&second).is_some() {
                 let redstone = matches!(self.base, "illuminant_block" | "illuminant_block_on");
@@ -286,11 +286,11 @@ impl ItemPart for Info {
                 } else {
                     vec![]
                 };
-                event.lines.push(gray(Text::translate(second, args)));
+                let _ = event.lines.push(gray(Text::translate(second, args)));
             }
         } else {
             let key_name = styled("simplylight.key.shift", "gold", true);
-            event
+            let _ = event
                 .lines
                 .push(gray(Text::translate("simplylight.shift", vec![key_name])));
         }
