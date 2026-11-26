@@ -1,7 +1,7 @@
 # Simply Light for Sunrise: native code in src/ with its data/ and assets/.
 id = "simplylight"
 name = "Simply Light"
-version = "0.3.7"
+version = "0.3.8"
 description = "160 light blocks in every dye colour: lamps, panels, slabs, bulbs, rods, posts and edge lights."
 authors = ["Flanks255", "arismoko"]
 license = "MIT"
