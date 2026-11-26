@@ -1,7 +1,7 @@
 # Simply Light for Sunrise: native code in src/ with its data/ and assets/.
 id = "simplylight"
 name = "Simply Light"
-version = "0.3.6"
+version = "0.3.7"
 description = "160 light blocks in every dye colour: lamps, panels, slabs, bulbs, rods, posts and edge lights."
 authors = ["Flanks255", "arismoko"]
 license = "MIT"
@@ -11,4 +11,4 @@ side = "both"
 
 [native]
 game = "26.3"
-sunrise = "6a02076f89cd189d74d63492dda5b023fa85a38f"
+sunrise = "ba1f24e4ad41246b558230aa665539dc768b1287"
